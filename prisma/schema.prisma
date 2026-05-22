@@ -1,0 +1,225 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       String     @id @default(uuid())
+  name     String
+  email    String     @unique
+  password String
+  roles    UserRole[]
+
+  // Relasi CMS: Penulis postingan dan halaman
+  posts    Post[]
+  pages    Page[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user")
+}
+
+model OtpLog {
+  id        String   @id @default(uuid())
+  email     String
+  otp       String
+  isUsed    Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("otp_log")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+
+  users      UserRole[]
+  menuAccess RoleMenuAccess[]
+
+  @@map("role")
+}
+
+model Permission {
+  id         String           @id @default(uuid())
+  name       String           @unique
+  roleAccess RoleMenuAccess[]
+
+  @@map("permission")
+}
+
+model Menu {
+  id    String  @id @default(uuid())
+  title String
+  path  String
+  icon  String?
+  order Int     @default(0)
+
+  parentId String?
+  parent   Menu?   @relation("SubMenus", fields: [parentId], references: [id], onDelete: SetNull)
+  children Menu[]  @relation("SubMenus")
+
+  roleAccess RoleMenuAccess[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("menu")
+}
+
+model RoleMenuAccess {
+  id           String @id @default(uuid())
+  roleId       String
+  menuId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  menu       Menu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, menuId, permissionId])
+  @@map("rolemenuaccess")
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("userrole")
+}
+
+// ==========================================
+// CMS CORE ENGINE MODELS
+// ==========================================
+
+model Template {
+  id          String     @id @default(uuid())
+  name        String     // Contoh: "Layout Berita", "Layout Galeri"
+  slug        String     @unique // Contoh: "layout-berita"
+  description String?
+  
+  categories  Category[] // Kategori yang menggunakan template ini
+  pages       Page[]     // Halaman statis yang menggunakan template ini
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("template")
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String    // Contoh: "Berita", "Opini"
+  slug        String    @unique
+  description String?
+
+  // Mapping otomatis: Kategori ini pakai template apa
+  templateId  String?
+  template    Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  posts       Post[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("category")
+}
+
+// Bagian model Post pada schema.prisma
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Post {
+  id           String     @id @default(uuid())
+  title        String     // Judul (ID)
+  titleEn      String?    // Judul (EN)
+  slug         String     @unique
+  content      String     @db.Text // Konten (ID)
+  contentEn    String?    @db.Text // Konten (EN)
+  image        String?    // Path/URL file gambar
+  imageCaption String?    // Keterangan Gambar
+  status       PostStatus @default(DRAFT)
+
+  authorId     String
+  author       User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  categoryId   String
+  category     Category   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  publishedAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("post")
+}
+
+model Page {
+  id           String     @id @default(uuid())
+  title        String
+  titleEn      String?
+  slug         String     @unique
+  content      String     @db.Text
+  contentEn    String?    @db.Text
+  
+  // KOLOM BARU: Untuk menampung Custom Fields secara dinamis
+  contentExtras Json?      
+  
+  image        String?
+  imageCaption String?
+  status       PostStatus @default(DRAFT)
+  authorId     String
+  author       User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  templateId   String?
+  template     Template?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  publishedAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("page")
+}
+
+model PublicMenu {
+  id        String   @id @default(uuid())
+  label     String   // Teks yang muncul di Navbar
+  url       String   // Rute akses (e.g., /, /p/tentang-kami)
+  order     Int      @default(0) // Urutan geser
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("public_menu")
+}
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique // e.g., site_title, site_footer_desc, site_email
+  value     String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("setting")
+}
+
+
+model Media {
+  id        String   @id @default(uuid())
+  fileName  String
+  fileUrl   String   @unique // Jalur akses, e.g., /uploads/images/abc.jpg
+  mimeType  String   // e.g., image/jpeg, image/png, video/mp4
+  size      Int      // Ukuran file dalam bytes
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("media")
+}
