@@ -121,6 +121,69 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
+// Tambahkan fungsi register ini
+export const register = async (req: Request, res: Response) => {
+  try {
+    const { name, email, password } = req.body;
+
+    // 1. Validasi Input
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "Nama, email, dan password wajib diisi." });
+    }
+
+    // 2. Cek apakah email sudah terdaftar
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ message: "Email sudah digunakan." });
+    }
+
+    // 3. Hash Password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 4. Simpan User ke Database dan Set Role Otomatis sebagai "USER"
+    const newUser = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        roles: {
+          create: [
+            {
+              role: {
+                connectOrCreate: {
+                  where: { name: "USER" },
+                  create: {
+                    name: "USER",
+                    description: "Default user role",
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+
+    // 5. Kirim Response (tanpa mengirimkan password)
+    res.status(201).json({
+      message: "Registrasi berhasil. Silakan login.",
+      user: {
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      message: "Terjadi kesalahan server saat registrasi",
+      error: error.message,
+    });
+  }
+};
+
 // ============================================================================
 // FUNGSI BARU: Generate Token Baru menggunakan Refresh Token
 // ============================================================================
