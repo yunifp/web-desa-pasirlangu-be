@@ -14,6 +14,7 @@ import publicMenuRoutes from "./publicMenu.routes";
 // Impor rute admin pengaturan baru
 import settingRoutes from "./setting.routes";
 import mediaRoutes from "./media.routes";
+import productRoutes from "./product.routes";
 
 const router = Router();
 
@@ -27,6 +28,7 @@ router.use("/categories", categoryRoutes);
 router.use("/posts", postRoutes);
 router.use("/pages", pageRoutes);
 router.use("/public-menus", publicMenuRoutes);
+router.use("/products", productRoutes);
 
 // Daftarkan rute pengaturan web untuk admin
 router.use("/settings", settingRoutes);

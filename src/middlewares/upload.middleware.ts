@@ -71,11 +71,10 @@ export const uploadFotoCalon = multer({
 });
 
 // ============================================================================
-// 4. [DIPERBARUI] UPLOAD PUSTAKA MEDIA (GAMBAR, VIDEO, DOKUMEN)
+// 4. UPLOAD PUSTAKA MEDIA (GAMBAR, VIDEO, DOKUMEN)
 // ============================================================================
 const storageMedia = multer.diskStorage({
   destination: (req, file, cb) => {
-    // UBAH INI KEMBALI KE 'posts' AGAR COCOK DENGAN RESPONSE URL CONTROLLER
     const dir = './uploads/posts'; 
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
@@ -107,5 +106,29 @@ export const uploadPostImage = multer({
     } else {
       cb(new Error('Tipe file tidak didukung! Hanya Gambar, Video, PDF, Word, Excel, dan PPT yang diperbolehkan.'));
     }
+  }
+});
+
+// ============================================================================
+// 5. UPLOAD GAMBAR PRODUK
+// ============================================================================
+const storageProduct = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = './uploads/products';
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, 'product-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+export const uploadProductImage = multer({ 
+  storage: storageProduct,
+  limits: { fileSize: 5 * 1024 * 1024 }, // Max 5MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Hanya file gambar yang diperbolehkan!'));
   }
 });

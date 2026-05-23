@@ -14,9 +14,10 @@ model User {
   password String
   roles    UserRole[]
 
-  // Relasi CMS: Penulis postingan dan halaman
+  // Relasi CMS: Penulis postingan, halaman, dan produk
   posts    Post[]
   pages    Page[]
+  products Product[]  // TAMBAHAN: Relasi balik ke Product
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -127,6 +128,7 @@ model Category {
   template    Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
 
   posts       Post[]
+  products    Product[] // TAMBAHAN: Relasi balik ke Product
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -222,4 +224,34 @@ model Media {
   updatedAt DateTime @updatedAt
 
   @@map("media")
+}
+
+model Product {
+  id            String     @id @default(uuid())
+  name          String
+  slug          String     @unique
+  description   String     @db.Text
+  price         Int        // Harga dalam Rupiah
+  stock         Int        @default(0)
+  image         String?    // Path/URL file gambar produk
+  images        Json?
+  
+  // Action Buttons
+  button1Label  String?    // Contoh: "Beli via WhatsApp"
+  button1Url    String?    // Contoh: "https://wa.me/6281234..."
+  button2Label  String?    // Contoh: "Beli via Shopee"
+  button2Url    String?    // Contoh: "https://shopee.co.id/..."
+  
+  status        PostStatus @default(DRAFT)
+
+  authorId      String
+  author        User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  categoryId    String?
+  category      Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@map("product")
 }
